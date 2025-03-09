@@ -1,0 +1,5 @@
+runtime: python311
+entrypoint: gunicorn -b :$PORT main:app
+
+env_variables:
+  GOOGLE_CLOUD_PROJECT: "barbara2-451412"
