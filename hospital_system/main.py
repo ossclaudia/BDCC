@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
 from google.cloud import bigquery
+import flask
+import concurrent.futures
 
 app = Flask(__name__)
 
@@ -10,16 +12,63 @@ DATASET_ID = "MIMIC"
 TABLE_ID = "PATIENTS"
 TABLE_REF = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
 
+@app.route('/')
+def get_patients():
+    query_job = client.query(
+        """
+        SELECT
+            subject_id,
+            gender,
+            dob
+        FROM `barbara2-451412.MIMIC.PATIENTS`
+        LIMIT 10
+        """
+    )
+
+    return flask.redirect(
+        flask.url_for(
+            "results",
+            project_id=query_job.project,
+            job_id=query_job.job_id,
+            location=query_job.location,
+        )
+    )
+
+
+@app.route("/results")
+def results():
+    project_id = flask.request.args.get("project_id")
+    job_id = flask.request.args.get("job_id")
+    location = flask.request.args.get("location")
+
+    query_job = client.get_job(
+        job_id,
+        project=project_id,
+        location=location,
+    )
+
+    try:
+        # Set a timeout because queries could take longer than one minute.
+        results = query_job.result(timeout=30)
+    except concurrent.futures.TimeoutError:
+        return flask.render_template("timeout.html", job_id=query_job.job_id)
+
+    return flask.render_template("query_result.html", results=results)
+
+
 #adicionar um paciente
 @app.route('/rest/user', methods=['POST'])
 def create_patient():
-    data = request.get_json()
-    print("Recebido:", data)   #testar 
+
+    data = request.get_json()  # Get JSON data from request
     
-    query = f"""
-    INSERT INTO `{TABLE_REF}` (ROW_ID, SUBJECT_ID, GENDER, DOB)
-    VALUES (@row_id, @subject_id, @gender, @dob)
+    # Define the query with parameterized values
+    query = """
+        INSERT INTO `barbara2-451412.MIMIC.PATIENTS` (ROW_ID, SUBJECT_ID, GENDER, DOB)
+        VALUES (@row_id, @subject_id, @gender, @dob)
     """
+
+    # Create query job with parameters
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
             bigquery.ScalarQueryParameter("row_id", "INT64", data["row_id"]),
@@ -30,9 +79,15 @@ def create_patient():
     )
 
     query_job = client.query(query, job_config=job_config)
-    query_job.result()
 
-    return jsonify({"message": "Paciente criado com sucesso!"}), 201
+    try:
+        # Set a timeout because queries could take longer than one minute.
+        results = query_job.result(timeout=30)
+    except concurrent.futures.TimeoutError:
+        return flask.render_template("timeout.html", job_id=query_job.job_id)
+
+    return flask.render_template("post_result.html")
+
 
 #atualizar informacoes do paciente
 @app.route('/rest/user/<int:subject_id>', methods=['PUT'])
