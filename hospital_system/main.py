@@ -9,8 +9,9 @@ client = bigquery.Client()
 
 PROJECT_ID = "barbara2-451412"
 DATASET_ID = "MIMIC"
-TABLE_ID = "PATIENTS"
-TABLE_REF = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+TABLE_REF = f"{PROJECT_ID}.{DATASET_ID}"
+TABLE_PATIENTS = "PATIENTS"
+TABLE_ADMISSIONS = "ADMISSIONS"
 
 @app.route('/')
 def get_patients():
@@ -62,7 +63,7 @@ def create_patient():
     data = request.get_json()
  
     query = f"""
-    INSERT INTO `{TABLE_REF}` (SUBJECT_ID, GENDER, DOB)
+    INSERT INTO `{TABLE_REF}.{TABLE_PATIENTS}` (SUBJECT_ID, GENDER, DOB)
     VALUES (@subject_id, @gender, @dob)
     """
     job_config = bigquery.QueryJobConfig(
@@ -84,7 +85,7 @@ def update_patient(subject_id):
     data = request.get_json()
 
     query = f"""
-    UPDATE `{TABLE_REF}`
+    UPDATE `{TABLE_REF}.{TABLE_PATIENTS}`
     SET GENDER = @gender, DOB = @dob
     WHERE SUBJECT_ID = @subject_id
     """
@@ -107,7 +108,7 @@ def update_patient(subject_id):
 def delete_patient(subject_id):
     
     delete_query = f"""
-    DELETE FROM `{TABLE_REF}`
+    DELETE FROM `{TABLE_REF}.{TABLE_PATIENTS}`
     WHERE SUBJECT_ID = @subject_id
     """
     job_config = bigquery.QueryJobConfig(
@@ -122,3 +123,5 @@ def delete_patient(subject_id):
 if __name__ == '__main__':
     app.run(debug=True)
 
+
+#
