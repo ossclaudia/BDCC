@@ -59,34 +59,23 @@ def results():
 #adicionar um paciente
 @app.route('/rest/user', methods=['POST'])
 def create_patient():
-
-    data = request.get_json()  # Get JSON data from request
-    
-    # Define the query with parameterized values
-    query = """
-        INSERT INTO `barbara2-451412.MIMIC.PATIENTS` (ROW_ID, SUBJECT_ID, GENDER, DOB)
-        VALUES (@row_id, @subject_id, @gender, @dob)
+    data = request.get_json()
+ 
+    query = f"""
+    INSERT INTO `{TABLE_REF}` (SUBJECT_ID, GENDER, DOB)
+    VALUES (@subject_id, @gender, @dob)
     """
-
-    # Create query job with parameters
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
-            bigquery.ScalarQueryParameter("row_id", "INT64", data["row_id"]),
             bigquery.ScalarQueryParameter("subject_id", "INT64", data["subject_id"]),
             bigquery.ScalarQueryParameter("gender", "STRING", data["gender"]),
             bigquery.ScalarQueryParameter("dob", "TIMESTAMP", data["dob"])
         ]
     )
-
     query_job = client.query(query, job_config=job_config)
+    query_job.result()
 
-    try:
-        # Set a timeout because queries could take longer than one minute.
-        results = query_job.result(timeout=30)
-    except concurrent.futures.TimeoutError:
-        return flask.render_template("timeout.html", job_id=query_job.job_id)
-
-    return flask.render_template("post_result.html")
+    return jsonify({"message": "Paciente criado com sucesso!"}), 201
 
 
 #atualizar informacoes do paciente
@@ -112,13 +101,13 @@ def update_patient(subject_id):
 
     return jsonify({"message": f"Paciente {subject_id} atualizado com sucesso!"})
 
+
 #remover paciente
 @app.route('/rest/user/<int:subject_id>', methods=['DELETE'])
 def delete_patient(subject_id):
     
     delete_query = f"""
-    UPDATE `{TABLE_REF}`
-    SET SUBJECT_ID = 999999
+    DELETE FROM `{TABLE_REF}`
     WHERE SUBJECT_ID = @subject_id
     """
     job_config = bigquery.QueryJobConfig(
