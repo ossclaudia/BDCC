@@ -18,12 +18,12 @@ TABLE_ANSWERS = "ANSWERS"
 @app.route('/')
 def get_patients():
     query_job = client.query(
-        """
+        f"""
         SELECT
             subject_id,
             gender,
             dob
-        FROM `barbara2-451412.MIMIC.PATIENTS`
+        FROM `barbara2-451412.MIMIC.{TABLE_PATIENTS}`
         LIMIT 10
         """
     )
@@ -236,12 +236,12 @@ def create_answer():
 @app.route('/questions')
 def questions():
     query_job = client.query(
-        """
+        f"""
         SELECT
             message,
             id,
             patient_id
-        FROM `barbara2-451412.MIMIC.Questions`
+        FROM `barbara2-451412.MIMIC.{TABLE_QUESTIONS}`
         LIMIT 10
         """
     )
