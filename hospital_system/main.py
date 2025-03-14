@@ -156,14 +156,25 @@ def create_admission():
 def update_admission(hadm_id):
     data = request.get_json()
 
+    dischtime = data.get("dischtime")
+    deathtime = data.get("deathtime")
+
+    if deathtime:
+        dischtime = deathtime
+
+    death_param = deathtime if deathtime else None
+
     query = f"""
     UPDATE `{TABLE_REF}.{TABLE_ADMISSIONS}`
-    SET DISCHTIME = @dischtime
+    SET 
+        DISCHTIME = @dischtime,
+        DEATHTIME = @deathtime
     WHERE HADM_ID = @hadm_id
     """
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
-            bigquery.ScalarQueryParameter("dischtime", "TIMESTAMP", data["dischtime"]),
+            bigquery.ScalarQueryParameter("dischtime", "TIMESTAMP", dischtime),
+            bigquery.ScalarQueryParameter("deathtime", "TIMESTAMP", death_param),
             bigquery.ScalarQueryParameter("hadm_id", "INT64", hadm_id)
         ]
     )
@@ -172,6 +183,7 @@ def update_admission(hadm_id):
     query_job.result()
 
     return jsonify({"message": f"Admission {hadm_id} atualizada com sucesso!"})
+
 
 #---------------------------------------------------------------------------------------------------
 
